@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react'
+import Link from 'next/link'
 
 function Navbar() {
     return (
@@ -48,7 +49,7 @@ function Navbar() {
                     </a>
 
                     <a
-                        href="#employers"
+                        href="/employers"
                         className="text-[13px] font-medium text-slate-500 transition hover:text-[#078b5a]"
                     >
                         For Employers
@@ -64,14 +65,17 @@ function Navbar() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-3">
-                    <button className="hidden h-9 items-center gap-2 rounded-lg border border-slate-200 px-4 text-[12px] font-semibold text-slate-600 transition hover:border-[#07945d] hover:text-[#07945d] sm:flex">
+                    <Link href="/login" className="hidden h-9 items-center gap-2 rounded-lg border border-slate-200 px-4 text-[12px] font-semibold text-slate-600 transition hover:border-[#07945d] hover:text-[#07945d] sm:flex">
                         <Search size={14} />
                         Login
-                    </button>
+                    </Link>
 
-                    <button className="h-9 rounded-lg bg-[#078c59] px-5 text-[12px] font-semibold text-white shadow-sm transition hover:bg-[#067b4e]">
+                    <Link
+                        href="/signup"
+                        className="flex items-center h-9 rounded-lg bg-[#078c59] px-5 text-[12px] font-semibold text-white shadow-sm transition hover:bg-[#067b4e]"
+                    >
                         Sign Up
-                    </button>
+                    </Link>
                 </div>
             </div>
         </nav>
