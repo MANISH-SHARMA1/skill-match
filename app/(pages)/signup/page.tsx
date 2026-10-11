@@ -4,7 +4,6 @@
 import { useState } from "react";
 import {
   ArrowRight,
-  ArrowLeft,
   Check,
   ShieldCheck,
   Zap,
@@ -24,6 +23,9 @@ import {
   ChevronRight,
   Users,
 } from "lucide-react";
+import { axiosClient } from "@/utils/axiosClient";
+import { useRouter } from "next/navigation";
+import axios from "axios";
 
 const testimonials = [
   {
@@ -50,42 +52,49 @@ export default function SignupPage() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
 
-  const testimonial = testimonials[testimonialIndex];
+  const [formData, setFormData] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    password: ""
+  })
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleChange(
+    e: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const { name, value } = e.target;
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  }
+
+
+  const testimonial = testimonials[testimonialIndex];
+  const router = useRouter();
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMessage("");
-
-    const form = e.currentTarget;
-    const formData = new FormData(form);
-
-    formData.set("role", role);
-
-    if (role === "seeker") {
-      formData.set("jobType", jobType);
-      formData.set("location", location);
-
-      if (resume) {
-        formData.set("resume", resume);
-      }
-    }
 
     setSubmitting(true);
 
     try {
-      // Replace this endpoint with your actual signup API.
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        body: formData,
+      console.log(formData)
+      const response = await axios.post("/api/auth/register", {
+        fullName: formData.fullName.trim(),
+        email: formData.email.trim().toLowerCase(),
+        phone: formData.phone.trim(),
+        password: formData.password,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Unable to create your account.");
-      }
+      console.log(response.data.result)
 
       setMessage("Account created successfully!");
+
+      setTimeout(() => {
+        router.push("/login");
+      }, 1500);
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -101,7 +110,7 @@ export default function SignupPage() {
     <main className="min-h-screen bg-white font-sans text-slate-800">
       <div className="grid min-h-screen lg:grid-cols-[1.18fr_1fr]">
         {/* LEFT: Promotional panel */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-[#effaf5] via-[#f5fcf9] to-[#e6f6ee] px-6 py-8 sm:px-10 lg:px-12 xl:px-16">
+        <section className="relative overflow-hidden bg-linear-to-br from-[#effaf5] via-[#f5fcf9] to-[#e6f6ee] px-6 py-8 sm:px-10 lg:px-12 xl:px-16">
           {/* Decorative circles */}
           <div className="pointer-events-none absolute -left-20 top-32 h-72 w-72 rounded-full bg-white/60 blur-3xl" />
           <div className="pointer-events-none absolute right-0 top-0 h-80 w-80 rounded-full bg-emerald-100/40 blur-3xl" />
@@ -165,17 +174,17 @@ export default function SignupPage() {
             <div className="relative mx-auto mt-7 max-w-lg pb-2">
               <div className="absolute left-[10%] top-5 h-52 w-52 rounded-full bg-[#bce6d2]/70 sm:h-64 sm:w-64" />
 
-              <div className="relative mx-auto h-[245px] w-full overflow-hidden rounded-2xl sm:h-[300px]">
+              <div className="relative mx-auto h-61.25 w-full overflow-hidden rounded-2xl sm:h-75">
                 <img
                   src="/images/signup-hero.jpg"
                   alt="Professional using a laptop in a bright workspace"
                   className="h-full w-full object-cover object-center"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-emerald-950/20 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-linear-to-t from-emerald-950/20 via-transparent to-transparent" />
               </div>
 
               {/* Recommended job card */}
-              <div className="absolute left-0 top-3 z-10 w-[145px] rounded-xl border border-white bg-white/95 p-3 shadow-lg sm:left-1 sm:w-[165px]">
+              <div className="absolute left-0 top-3 z-10 w-36.25 rounded-xl border border-white bg-white/95 p-3 shadow-lg sm:left-1 sm:w-41.25">
                 <p className="text-[8px] font-semibold text-emerald-700">
                   Recommended for You
                 </p>
@@ -204,7 +213,7 @@ export default function SignupPage() {
               </div>
 
               {/* Skills card */}
-              <div className="absolute bottom-5 right-0 z-10 w-[112px] rounded-xl border border-white bg-white/95 p-3 shadow-lg sm:right-1 sm:w-[130px]">
+              <div className="absolute bottom-5 right-0 z-10 w-28 rounded-xl border border-white bg-white/95 p-3 shadow-lg sm:right-1 sm:w-32.5">
                 <p className="text-[9px] font-bold">Your Skills</p>
                 {["React", "Node.js", "Tailwind CSS", "TypeScript"].map(
                   (skill) => (
@@ -251,7 +260,7 @@ export default function SignupPage() {
                   onClick={() =>
                     setTestimonialIndex(
                       (testimonialIndex + testimonials.length - 1) %
-                        testimonials.length
+                      testimonials.length
                     )
                   }
                   className="rounded-full border border-emerald-100 bg-white p-1.5 text-emerald-700 shadow-sm hover:bg-emerald-50"
@@ -283,11 +292,10 @@ export default function SignupPage() {
               <button
                 type="button"
                 onClick={() => setRole("seeker")}
-                className={`flex items-center justify-center gap-2 border-b-2 py-3 text-xs font-semibold transition ${
-                  role === "seeker"
-                    ? "border-emerald-700 text-emerald-800"
-                    : "border-transparent text-slate-400 hover:text-slate-700"
-                }`}
+                className={`flex items-center justify-center gap-2 border-b-2 py-3 text-xs font-semibold transition ${role === "seeker"
+                  ? "border-emerald-700 text-emerald-800"
+                  : "border-transparent text-slate-400 hover:text-slate-700"
+                  }`}
               >
                 <UserRound size={15} />
                 Job Seeker
@@ -296,11 +304,10 @@ export default function SignupPage() {
               <button
                 type="button"
                 onClick={() => setRole("employer")}
-                className={`flex items-center justify-center gap-2 border-b-2 py-3 text-xs font-semibold transition ${
-                  role === "employer"
-                    ? "border-emerald-700 text-emerald-800"
-                    : "border-transparent text-slate-400 hover:text-slate-700"
-                }`}
+                className={`flex items-center justify-center gap-2 border-b-2 py-3 text-xs font-semibold transition ${role === "employer"
+                  ? "border-emerald-700 text-emerald-800"
+                  : "border-transparent text-slate-400 hover:text-slate-700"
+                  }`}
               >
                 <Users size={15} />
                 Employer
@@ -332,6 +339,8 @@ export default function SignupPage() {
                     name="fullName"
                     type="text"
                     autoComplete="name"
+                    value={formData.fullName}
+                    onChange={handleChange}
                     required
                     placeholder="Enter your full name"
                     className="h-10 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-xs outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
@@ -354,6 +363,8 @@ export default function SignupPage() {
                     name="email"
                     type="email"
                     autoComplete="email"
+                    value={formData.email}
+                    onChange={handleChange}
                     required
                     placeholder="you@example.com"
                     className="h-10 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-xs outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
@@ -376,6 +387,8 @@ export default function SignupPage() {
                     name="phone"
                     type="tel"
                     autoComplete="tel"
+                    value={formData.phone}
+                    onChange={handleChange}
                     required
                     pattern="[0-9+\-\s()]{7,20}"
                     placeholder="+91 98765 43210"
@@ -401,6 +414,8 @@ export default function SignupPage() {
                     autoComplete="new-password"
                     required
                     minLength={8}
+                    value={formData.password}
+                    onChange={handleChange}
                     placeholder="Create a strong password"
                     className="h-10 w-full rounded-lg border border-slate-200 pl-9 pr-10 text-xs outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
                   />
@@ -459,11 +474,10 @@ export default function SignupPage() {
                       <button
                         type="button"
                         onClick={() => setJobType("fulltime")}
-                        className={`flex items-center justify-center gap-2 rounded-lg border px-2 py-2.5 text-[10px] font-semibold transition ${
-                          jobType === "fulltime"
-                            ? "border-emerald-700 bg-emerald-700 text-white"
-                            : "border-slate-200 bg-white text-slate-500 hover:bg-emerald-50"
-                        }`}
+                        className={`flex items-center justify-center gap-2 rounded-lg border px-2 py-2.5 text-[10px] font-semibold transition ${jobType === "fulltime"
+                          ? "border-emerald-700 bg-emerald-700 text-white"
+                          : "border-slate-200 bg-white text-slate-500 hover:bg-emerald-50"
+                          }`}
                       >
                         <BriefcaseBusiness size={13} />
                         Full-time Jobs
@@ -472,11 +486,10 @@ export default function SignupPage() {
                       <button
                         type="button"
                         onClick={() => setJobType("freelance")}
-                        className={`flex items-center justify-center gap-2 rounded-lg border px-2 py-2.5 text-[10px] font-semibold transition ${
-                          jobType === "freelance"
-                            ? "border-emerald-700 bg-emerald-700 text-white"
-                            : "border-slate-200 bg-white text-slate-500 hover:bg-emerald-50"
-                        }`}
+                        className={`flex items-center justify-center gap-2 rounded-lg border px-2 py-2.5 text-[10px] font-semibold transition ${jobType === "freelance"
+                          ? "border-emerald-700 bg-emerald-700 text-white"
+                          : "border-slate-200 bg-white text-slate-500 hover:bg-emerald-50"
+                          }`}
                       >
                         <GraduationCap size={14} />
                         Freelance / Part-time
@@ -495,7 +508,7 @@ export default function SignupPage() {
 
                     <label
                       htmlFor="resume"
-                      className="flex min-h-[88px] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50/40 px-4 py-3 text-center transition hover:border-emerald-500 hover:bg-emerald-50/40"
+                      className="flex min-h-22 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50/40 px-4 py-3 text-center transition hover:border-emerald-500 hover:bg-emerald-50/40"
                     >
                       <UploadCloud size={21} className="text-emerald-700" />
                       <span className="mt-2 text-[10px] font-semibold text-slate-700">
@@ -569,11 +582,10 @@ export default function SignupPage() {
               {message && (
                 <p
                   role="status"
-                  className={`rounded-lg px-3 py-2 text-xs ${
-                    message.includes("successfully")
-                      ? "bg-emerald-50 text-emerald-700"
-                      : "bg-red-50 text-red-600"
-                  }`}
+                  className={`rounded-lg px-3 py-2 text-xs ${message.includes("successfully")
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-red-50 text-red-600"
+                    }`}
                 >
                   {message}
                 </p>

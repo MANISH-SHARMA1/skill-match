@@ -20,6 +20,8 @@ import {
   ChevronRight,
   Sparkles,
 } from "lucide-react";
+import axios from "axios";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const testimonials = [
   {
@@ -36,6 +38,18 @@ const testimonials = [
   },
 ];
 
+interface FormData {
+  identifier: string; // email or mobile number
+  password: string;
+  rememberMe: boolean;
+}
+
+interface FormErrors {
+  identifier?: string;
+  password?: string;
+  general?: string;
+}
+
 export default function LoginPage() {
   const [role, setRole] = useState<"seeker" | "employer">("seeker");
   const [showPassword, setShowPassword] = useState(false);
@@ -43,48 +57,72 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [testimonialIndex, setTestimonialIndex] = useState(0);
+  const router = useRouter();
+  const searchParams = useSearchParams()
+  // const { login } = useAuth();
 
   const testimonial = testimonials[testimonialIndex];
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const [formData, setFormData] = useState<FormData>({
+    identifier: "",
+    password: "",
+    rememberMe: false,
+  });
+
+  const [errors, setErrors] = useState<FormErrors>({});
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const { name, value, type, checked } = e.target;
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+
+    if (errors[name as keyof FormErrors]) {
+      setErrors((prev) => ({ ...prev, [name]: undefined }));
+    }
+  }
+
+  function validate(): boolean {
+    const newErrors: FormErrors = {};
+
+    if (!formData.identifier.trim()) {
+      newErrors.identifier = "Email or mobile number is required";
+    }
+
+    if (!formData.password) {
+      newErrors.password = "Password is required";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setMessage("");
+
+    if (!validate()) return;
+
     setSubmitting(true);
-
-    const form = new FormData(e.currentTarget);
-
-    const payload = {
-      email: String(form.get("email") ?? ""),
-      password: String(form.get("password") ?? ""),
-      role,
-      rememberMe,
-    };
+    setErrors((prev) => ({ ...prev, general: undefined }));
 
     try {
-      // Replace this URL with your actual login API.
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const response = await axios.post("/api/auth/login", {
+        identifier: formData.identifier.trim().toLowerCase(),
+        password: formData.password,
+        rememberMe: formData.rememberMe,
+      })
+      console.log(response.data.result.accessToken)
+      // login(response.data.result.accessToken)
 
-      const data = await response.json();
+      const redirectTo = searchParams.get("redirect")
+      const safeRedirect = redirectTo && redirectTo.startsWith("/") ? redirectTo : "/"
 
-      if (!response.ok) {
-        throw new Error(data.message || "Invalid email or password.");
-      }
-
-      // Adapt the redirect to your authentication response.
-      window.location.href =
-        data.redirectTo ||
-        (role === "employer" ? "/employer/dashboard" : "/dashboard");
-    } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to log in. Please try again."
-      );
-    } finally {
+      router.push(safeRedirect);
+      router.refresh();
+    } catch { }
+    finally {
       setSubmitting(false);
     }
   }
@@ -249,7 +287,7 @@ export default function LoginPage() {
                   onClick={() =>
                     setTestimonialIndex(
                       (testimonialIndex + testimonials.length - 1) %
-                        testimonials.length
+                      testimonials.length
                     )
                   }
                   className="rounded-full border border-emerald-100 bg-white p-1.5 text-emerald-700 shadow-sm hover:bg-emerald-50"
@@ -282,11 +320,10 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setRole("seeker")}
-                className={`flex items-center justify-center gap-2 border-b-2 py-3 text-xs font-semibold transition ${
-                  role === "seeker"
-                    ? "border-emerald-700 text-emerald-800"
-                    : "border-transparent text-slate-400 hover:text-slate-700"
-                }`}
+                className={`flex items-center justify-center gap-2 border-b-2 py-3 text-xs font-semibold transition ${role === "seeker"
+                  ? "border-emerald-700 text-emerald-800"
+                  : "border-transparent text-slate-400 hover:text-slate-700"
+                  }`}
               >
                 <UserRound size={15} />
                 Job Seeker
@@ -295,11 +332,10 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setRole("employer")}
-                className={`flex items-center justify-center gap-2 border-b-2 py-3 text-xs font-semibold transition ${
-                  role === "employer"
-                    ? "border-emerald-700 text-emerald-800"
-                    : "border-transparent text-slate-400 hover:text-slate-700"
-                }`}
+                className={`flex items-center justify-center gap-2 border-b-2 py-3 text-xs font-semibold transition ${role === "employer"
+                  ? "border-emerald-700 text-emerald-800"
+                  : "border-transparent text-slate-400 hover:text-slate-700"
+                  }`}
               >
                 <Users size={15} />
                 Employer
@@ -335,10 +371,12 @@ export default function LoginPage() {
                   />
                   <input
                     id="email"
-                    name="email"
+                    name="identifier"
                     type="email"
                     autoComplete="email"
                     required
+                    value={formData.identifier}
+                    onChange={handleChange}
                     placeholder="you@example.com"
                     className="h-11 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-xs outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
                   />
@@ -375,6 +413,8 @@ export default function LoginPage() {
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     required
+                    value={formData.password}
+                    onChange={handleChange}
                     minLength={8}
                     placeholder="Enter your password"
                     className="h-11 w-full rounded-lg border border-slate-200 pl-9 pr-10 text-xs outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
