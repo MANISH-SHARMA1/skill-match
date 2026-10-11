@@ -155,7 +155,7 @@ export default function NotFound() {
         </section>
 
         <p className="mt-7 text-center text-[10px] text-slate-400">
-          © {new Date().getFullYear()} SkillMatch. Find the right fit.
+          © 2026 SkillMatch. Find the right fit.
         </p>
       </div>
     </main>

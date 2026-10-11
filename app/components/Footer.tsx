@@ -92,7 +92,7 @@ export default function Footer() {
         {/* Bottom Footer */}
         <div className="flex flex-col justify-center gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs leading-5 text-[#A7B7BA] sm:text-sm">
-            © {new Date().getFullYear()} SkillMatch. All rights reserved.
+            © 2026 SkillMatch. All rights reserved.
           </p>
 
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3">

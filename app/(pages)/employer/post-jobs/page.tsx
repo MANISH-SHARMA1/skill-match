@@ -1,7 +1,7 @@
 
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft, BriefcaseBusiness, MapPin, IndianRupee, Clock,
@@ -38,7 +38,7 @@ const benefitSuggestions = [
   "Paid Leave", "Learning Budget", "Performance Bonus",
 ];
 
-export default function PostJobPage() {
+function PostJobForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("edit");
@@ -422,5 +422,21 @@ export default function PostJobPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function PostJobPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-[#f6f9f8]">
+          <p className="text-base text-slate-500">
+            Loading job form...
+          </p>
+        </div>
+      }
+    >
+      <PostJobForm />
+    </Suspense>
   );
 }
