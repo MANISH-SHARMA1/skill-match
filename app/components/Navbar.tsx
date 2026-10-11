@@ -1,85 +1,97 @@
-import { Search } from 'lucide-react'
-import Link from 'next/link'
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Search, Zap } from "lucide-react";
+
+const navItems = [
+    { label: "Home", href: "/" },
+    { label: "Jobs", href: "/jobs" },
+    { label: "Candidates", href: "/candidates" },
+    { label: "For Employers", href: "/employers" },
+    { label: "For Job Seekers", href: "/job-seekers" },
+];
 
 function Navbar() {
+    const pathname = usePathname();
+
+    const isActive = (href: string) => {
+        if (href === "/") return pathname === "/";
+        return pathname === href || pathname.startsWith(`${href}/`);
+    };
+
     return (
-        <nav className="border-b border-slate-100 bg-white">
-            <div className="mx-auto flex h-[76px] max-w-[1240px] items-center justify-between px-5 lg:px-8">
+        <nav className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
+            <div className="mx-auto flex h-20 max-w-[1240px] items-center justify-between px-5 lg:px-8">
 
                 {/* Logo */}
-                <div className="flex items-center gap-2.5">
-                    <div className="relative flex h-9 w-8 items-center justify-center">
-                        <div className="absolute h-8 w-5 -skew-x-[18deg] rounded-[5px] bg-[#07945d]" />
-                        <div className="absolute left-[12px] top-[3px] h-6 w-[5px] rotate-[24deg] rounded-full bg-white" />
+                <Link href="/" className="flex shrink-0 items-center gap-2.5">
+                    <div className="relative flex h-10 w-10 items-center justify-center">
+                        <Zap
+                            size={34}
+                            strokeWidth={2.5}
+                            className="fill-[#24D39B] text-[#24D39B]"
+                        />
                     </div>
 
                     <div>
-                        <div className="text-[18px] font-bold tracking-[-0.5px] text-[#17333a]">
+                        <div className="text-xl font-bold tracking-tight text-[#17333a]">
                             Skill<span className="text-[#07945d]">Match</span>
                         </div>
-
-                        <p className="-mt-0.5 text-[8px] font-medium tracking-wide text-slate-400">
+                        <p className="mt-0.5 text-[10px] font-medium tracking-wide text-slate-500">
                             Skills. Jobs. Better Matches.
                         </p>
                     </div>
+                </Link>
+
+                {/* Desktop Navigation */}
+                <div className="hidden items-center gap-6 lg:flex xl:gap-8">
+                    {navItems.map((item) => {
+                        const active = isActive(item.href);
+
+                        return (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                aria-current={active ? "page" : undefined}
+                                className={`relative flex h-20 items-center whitespace-nowrap text-sm font-semibold transition-colors duration-200 ${active
+                                        ? "text-[#078b5a]"
+                                        : "text-slate-600 hover:text-[#078b5a]"
+                                    }`}
+                            >
+                                {item.label}
+
+                                <span
+                                    className={`absolute bottom-0 left-0 right-0 mx-auto h-[3px] rounded-t-full bg-[#078b5a] transition-all duration-200 ${active
+                                            ? "w-full opacity-100"
+                                            : "w-0 opacity-0"
+                                        }`}
+                                />
+                            </Link>
+                        );
+                    })}
                 </div>
 
-                {/* Desktop navigation */}
-                <nav className="hidden items-center gap-9 md:flex">
-                    <a
-                        href="#"
-                        className="relative py-7 text-[13px] font-semibold text-[#078b5a]"
-                    >
-                        Home
-                        <span className="absolute bottom-0 left-0 right-0 mx-auto h-[2px] w-5 rounded-full bg-[#078b5a]" />
-                    </a>
-
-                    <a
-                        href="/jobs"
-                        className="text-[13px] font-medium text-slate-500 transition hover:text-[#078b5a]"
-                    >
-                        Jobs
-                    </a>
-
-                    <a
-                        href="#candidates"
-                        className="text-[13px] font-medium text-slate-500 transition hover:text-[#078b5a]"
-                    >
-                        Candidates
-                    </a>
-
-                    <a
-                        href="/employers"
-                        className="text-[13px] font-medium text-slate-500 transition hover:text-[#078b5a]"
-                    >
-                        For Employers
-                    </a>
-
-                    <a
-                        href="#seekers"
-                        className="text-[13px] font-medium text-slate-500 transition hover:text-[#078b5a]"
-                    >
-                        For Job Seekers
-                    </a>
-                </nav>
-
                 {/* Actions */}
-                <div className="flex items-center gap-3">
-                    <Link href="/login" className="hidden h-9 items-center gap-2 rounded-lg border border-slate-200 px-4 text-[12px] font-semibold text-slate-600 transition hover:border-[#07945d] hover:text-[#07945d] sm:flex">
-                        <Search size={14} />
+                <div className="flex shrink-0 items-center gap-2.5 sm:gap-3">
+                    <Link
+                        href="/login"
+                        className="hidden h-10 items-center gap-2 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700 transition hover:border-[#07945d] hover:bg-emerald-50 hover:text-[#07945d] sm:flex"
+                    >
+                        <Search size={16} />
                         Login
                     </Link>
 
                     <Link
                         href="/signup"
-                        className="flex items-center h-9 rounded-lg bg-[#078c59] px-5 text-[12px] font-semibold text-white shadow-sm transition hover:bg-[#067b4e]"
+                        className="flex h-10 items-center justify-center rounded-lg bg-[#078c59] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#067b4e] hover:shadow-md"
                     >
                         Sign Up
                     </Link>
                 </div>
             </div>
         </nav>
-    )
+    );
 }
 
-export default Navbar
+export default Navbar;

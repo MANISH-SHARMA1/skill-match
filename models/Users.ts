@@ -1,4 +1,3 @@
-
 import { Schema, models, model } from "mongoose";
 
 const UserSchema = new Schema(
@@ -34,17 +33,9 @@ const UserSchema = new Schema(
       default: "jobSeeker",
       index: true,
     },
-    isEmailVerified: {
-      type: Boolean,
-      default: false,
-    },
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
     lastLoginAt: Date,
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export default models.User || model("User", UserSchema);

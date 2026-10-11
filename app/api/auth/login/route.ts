@@ -26,14 +26,16 @@ export async function POST(req: NextRequest) {
     // Check if user exists
     const user = await User.findOne({
       $or: [{ email: identifier }, { phone: identifier }],
-    }).select("+password");
+    })
+      .select("+passwordHash")
+      .select("+role");
 
     if (!user) {
       return error(400, "No such user found.");
     }
 
     // Check if password matches
-    const matchedPassword = await bcrypt.compare(password, user.password);
+    const matchedPassword = await bcrypt.compare(password, user.passwordHash);
 
     if (!matchedPassword) {
       return error(403, "Incorrect password.");
@@ -57,9 +59,9 @@ export async function POST(req: NextRequest) {
     });
 
     // Send access token in response
-    return success(201, { accessToken });
+    return success(201, { accessToken, role: user.role });
   } catch (e) {
-    console.log(e)
+    console.log(e);
     // Handles any unexpected errors
     return error(500, "Something went wrong. www");
   }

@@ -7,7 +7,7 @@ const TeamMemberSchema = new Schema(
     avatar: { type: String, default: "" },
     linkedIn: { type: String, default: "" },
   },
-  { _id: true }
+  { _id: true },
 );
 
 const CompanySchema = new Schema(
@@ -18,14 +18,16 @@ const CompanySchema = new Schema(
       required: true,
       index: true,
     },
-    members: [{
-      user: { type: Schema.Types.ObjectId, ref: "User", required: true },
-      role: {
-        type: String,
-        enum: ["owner", "admin", "recruiter"],
-        default: "recruiter",
+    members: [
+      {
+        user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+        role: {
+          type: String,
+          enum: ["owner", "admin", "recruiter"],
+          default: "recruiter",
+        },
       },
-    }],
+    ],
     name: {
       type: String,
       required: true,
@@ -65,18 +67,15 @@ const CompanySchema = new Schema(
     website: { type: String, default: "" },
     email: { type: String, lowercase: true, trim: true, default: "" },
     phone: { type: String, default: "" },
-    location: {
-      city: { type: String, default: "" },
-      state: { type: String, default: "" },
-      country: { type: String, default: "India" },
-      address: { type: String, default: "" },
-    },
+    location: { type: String, default: "" },
     benefits: [{ type: String, trim: true }],
-    values: [{
-      title: { type: String, required: true },
-      description: { type: String, default: "" },
-      icon: { type: String, default: "" },
-    }],
+    values: [
+      {
+        title: { type: String, required: true },
+        description: { type: String, default: "" },
+        icon: { type: String, default: "" },
+      },
+    ],
     team: [TeamMemberSchema],
     socialLinks: {
       linkedin: { type: String, default: "" },
@@ -87,7 +86,7 @@ const CompanySchema = new Schema(
     isVerified: { type: Boolean, default: false },
     isPublished: { type: Boolean, default: false },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 CompanySchema.index({ name: "text", overview: "text", industry: "text" });

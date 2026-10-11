@@ -259,7 +259,7 @@ export default function HowItWorks() {
           </div>
 
           <a
-            href="/employer/jobs/new"
+            href="/employer/post-jobs"
             className="mt-7 inline-flex items-center justify-center gap-3 rounded-lg bg-emerald-700 px-6 py-3 text-xs font-bold text-white shadow-md shadow-emerald-900/10 transition hover:-translate-y-0.5 hover:bg-emerald-800"
           >
             Post a Job Now
@@ -294,7 +294,7 @@ export default function HowItWorks() {
 
             {/* Decorative botanical illustration */}
             <div className="relative mt-auto flex h-24 items-end justify-center overflow-hidden">
-              <div className="absolute bottom-[-30px] h-20 w-32 rounded-t-full bg-emerald-100/70" />
+              <div className="absolute -bottom-7.5 h-20 w-32 rounded-t-full bg-emerald-100/70" />
               <Sprout
                 size={80}
                 strokeWidth={1.3}

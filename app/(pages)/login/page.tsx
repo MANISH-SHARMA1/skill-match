@@ -13,33 +13,15 @@ import {
   ShieldCheck,
   Target,
   Zap,
-  BriefcaseBusiness,
   Check,
-  Star,
-  ChevronLeft,
-  ChevronRight,
   Sparkles,
 } from "lucide-react";
-import axios from "axios";
-import { useRouter, useSearchParams } from "next/navigation";
-
-const testimonials = [
-  {
-    quote:
-      "SkillMatch helped me discover opportunities that genuinely matched my skills and career goals.",
-    name: "Neha Sharma",
-    role: "Frontend Developer",
-  },
-  {
-    quote:
-      "Finding the right opportunities has never felt easier. SkillMatch helped me focus on the jobs that fit.",
-    name: "Rahul Verma",
-    role: "Full Stack Developer",
-  },
-];
+import { useRouter } from "next/navigation";
+import { axiosClient } from "@/utils/axiosClient";
+// import { useAuth } from "@/context/AuthContext";
 
 interface FormData {
-  identifier: string; // email or mobile number
+  identifier: string;
   password: string;
   rememberMe: boolean;
 }
@@ -55,13 +37,9 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState("");
-  const [testimonialIndex, setTestimonialIndex] = useState(0);
-  const router = useRouter();
-  const searchParams = useSearchParams()
-  // const { login } = useAuth();
 
-  const testimonial = testimonials[testimonialIndex];
+  const router = useRouter();
+  // const { login } = useAuth();
 
   const [formData, setFormData] = useState<FormData>({
     identifier: "",
@@ -108,19 +86,25 @@ export default function LoginPage() {
     setErrors((prev) => ({ ...prev, general: undefined }));
 
     try {
-      const response = await axios.post("/api/auth/login", {
+      const response = await axiosClient.post("/api/auth/login", {
         identifier: formData.identifier.trim().toLowerCase(),
         password: formData.password,
         rememberMe: formData.rememberMe,
       })
-      console.log(response.data.result.accessToken)
+      console.log(response.data.result)
       // login(response.data.result.accessToken)
 
-      const redirectTo = searchParams.get("redirect")
-      const safeRedirect = redirectTo && redirectTo.startsWith("/") ? redirectTo : "/"
+      setFormData({
+        identifier: "",
+        password: "",
+        rememberMe: false,
+      });
 
-      router.push(safeRedirect);
-      router.refresh();
+      if (response.data.result.role === "jobSeeker") {
+        router.push("/profile")
+      } else if (response.data.result.role === "employer") {
+        router.push("/employer/company-profile")
+      }
     } catch { }
     finally {
       setSubmitting(false);
@@ -131,7 +115,7 @@ export default function LoginPage() {
     <main className="min-h-screen bg-white font-sans text-slate-800">
       <div className="grid min-h-screen lg:grid-cols-[1.18fr_1fr]">
         {/* LEFT PROMOTIONAL PANEL */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-[#effaf5] via-[#f5fcf9] to-[#e6f6ee] px-6 py-8 sm:px-10 lg:px-12 xl:px-16">
+        <section className="relative overflow-hidden bg-linear-to-br from-[#effaf5] via-[#f5fcf9] to-[#e6f6ee] px-6 py-8 sm:px-10 lg:px-12 xl:px-16">
           <div className="pointer-events-none absolute -left-20 top-32 h-72 w-72 rounded-full bg-white/60 blur-3xl" />
           <div className="pointer-events-none absolute right-0 top-0 h-80 w-80 rounded-full bg-emerald-100/40 blur-3xl" />
 
@@ -195,17 +179,17 @@ export default function LoginPage() {
             <div className="relative mx-auto mt-7 max-w-lg pb-2">
               <div className="absolute left-[10%] top-5 h-52 w-52 rounded-full bg-[#bce6d2]/70 sm:h-64 sm:w-64" />
 
-              <div className="relative mx-auto h-[245px] w-full overflow-hidden rounded-2xl bg-emerald-50 sm:h-[300px]">
+              <div className="relative mx-auto h-61.25 w-full overflow-hidden rounded-2xl bg-emerald-50 sm:h-75">
                 <img
                   src="/images/signup-hero.jpg"
                   alt="Professional working on a laptop"
                   className="h-full w-full object-cover object-center"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-emerald-950/20 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-linear-to-t from-emerald-950/20 via-transparent to-transparent" />
               </div>
 
               {/* Floating profile card */}
-              <div className="absolute left-0 top-3 z-10 w-[150px] rounded-xl border border-white bg-white/95 p-3 shadow-lg sm:left-1 sm:w-[170px]">
+              <div className="absolute left-0 top-3 z-10 w-37.5 rounded-xl border border-white bg-white/95 p-3 shadow-lg sm:left-1 sm:w-42.5">
                 <p className="text-[8px] font-semibold text-emerald-700">
                   YOUR CAREER PROFILE
                 </p>
@@ -233,7 +217,7 @@ export default function LoginPage() {
               </div>
 
               {/* Skills card */}
-              <div className="absolute bottom-5 right-0 z-10 w-[120px] rounded-xl border border-white bg-white/95 p-3 shadow-lg sm:right-1 sm:w-[135px]">
+              <div className="absolute bottom-5 right-0 z-10 w-30 rounded-xl border border-white bg-white/95 p-3 shadow-lg sm:right-1 sm:w-33.75">
                 <p className="text-[9px] font-bold text-slate-800">
                   Your Skills
                 </p>
@@ -248,65 +232,6 @@ export default function LoginPage() {
                     </p>
                   )
                 )}
-              </div>
-            </div>
-
-            {/* Testimonial */}
-            <div className="relative mt-4 rounded-2xl border border-white/80 bg-white/40 p-4 sm:p-5">
-              <div className="flex gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                  <UserRound size={22} />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] leading-[1.7] text-slate-600 sm:text-xs">
-                    &ldquo;{testimonial.quote}&rdquo;
-                  </p>
-                  <p className="mt-2 text-[10px] font-bold text-slate-800">
-                    {testimonial.name}
-                  </p>
-                  <p className="text-[9px] text-slate-500">
-                    {testimonial.role}
-                  </p>
-                  <div className="mt-1 flex gap-0.5 text-emerald-600">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        size={10}
-                        fill="currentColor"
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="absolute -top-4 right-4 flex gap-2">
-                <button
-                  type="button"
-                  aria-label="Previous testimonial"
-                  onClick={() =>
-                    setTestimonialIndex(
-                      (testimonialIndex + testimonials.length - 1) %
-                      testimonials.length
-                    )
-                  }
-                  className="rounded-full border border-emerald-100 bg-white p-1.5 text-emerald-700 shadow-sm hover:bg-emerald-50"
-                >
-                  <ChevronLeft size={15} />
-                </button>
-
-                <button
-                  type="button"
-                  aria-label="Next testimonial"
-                  onClick={() =>
-                    setTestimonialIndex(
-                      (testimonialIndex + 1) % testimonials.length
-                    )
-                  }
-                  className="rounded-full border border-emerald-100 bg-white p-1.5 text-emerald-700 shadow-sm hover:bg-emerald-50"
-                >
-                  <ChevronRight size={15} />
-                </button>
               </div>
             </div>
           </div>
@@ -452,16 +377,6 @@ export default function LoginPage() {
                   Secure login
                 </span>
               </div>
-
-              {/* Error / status */}
-              {message && (
-                <p
-                  role="alert"
-                  className="rounded-lg bg-red-50 px-3 py-2.5 text-xs text-red-600"
-                >
-                  {message}
-                </p>
-              )}
 
               {/* Submit */}
               <button

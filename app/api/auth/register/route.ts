@@ -44,17 +44,18 @@ export async function POST(req: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create new User
-    await User.create({
+   const res = await User.create({
       fullName,
       email,
       phone,
-      password: hashedPassword,
+      passwordHash: hashedPassword,
       role
     });
-
+console.log("::::", res)
     // Return success response
     return success(201, "Registered successfully.");
   } catch (e) {
+    console.log("Error in registration route:", e);
     // Handles any unexpected errors
     return error(500, "Something went wrong.");
   }

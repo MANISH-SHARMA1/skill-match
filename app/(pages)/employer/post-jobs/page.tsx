@@ -8,7 +8,7 @@ import {
   Users, Plus, X, Save, Send, Eye, CheckCircle2, FileText
 } from "lucide-react";
 import Link from "next/link";
-import { Job, getJobs, saveJob } from "../../libs/jobs";
+import { Job, getJobs, saveJob } from "../../../libs/jobs";
 
 const initialForm = {
   title: "",
@@ -180,12 +180,6 @@ export default function PostJobPage() {
   return (
     <main className="min-h-screen bg-[#f6f9f8] px-4 py-6 sm:px-8">
       <div className="mx-auto max-w-5xl">
-        <Link
-          href="/employer/jobs"
-          className="mb-5 inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-emerald-800"
-        >
-          <ArrowLeft size={15} /> Back to My Jobs
-        </Link>
 
         <header className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>

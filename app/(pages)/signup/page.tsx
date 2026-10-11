@@ -25,30 +25,11 @@ import {
 } from "lucide-react";
 import { axiosClient } from "@/utils/axiosClient";
 import { useRouter } from "next/navigation";
-import axios from "axios";
-
-const testimonials = [
-  {
-    quote:
-      "SkillMatch helped me find a job that perfectly matches my skills and career goals. The AI recommendations were spot on!",
-    name: "Neha Sharma",
-    role: "Frontend Developer",
-  },
-  {
-    quote:
-      "The platform made my job search easier. I discovered opportunities that genuinely matched my experience.",
-    name: "Rahul Verma",
-    role: "Full Stack Developer",
-  },
-];
 
 export default function SignupPage() {
-  const [role, setRole] = useState<"seeker" | "employer">("seeker");
-  const [jobType, setJobType] = useState<"fulltime" | "freelance">("fulltime");
+  const [role, setRole] = useState<"jobSeeker" | "employer">("jobSeeker");
   const [showPassword, setShowPassword] = useState(false);
-  const [location, setLocation] = useState("");
-  const [resume, setResume] = useState<File | null>(null);
-  const [testimonialIndex, setTestimonialIndex] = useState(0);
+
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -71,7 +52,6 @@ export default function SignupPage() {
   }
 
 
-  const testimonial = testimonials[testimonialIndex];
   const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -81,16 +61,25 @@ export default function SignupPage() {
     setSubmitting(true);
 
     try {
-      console.log(formData)
-      const response = await axios.post("/api/auth/register", {
+      console.log(formData, role)
+
+      const response = await axiosClient.post("/api/auth/register", {
         fullName: formData.fullName.trim(),
         email: formData.email.trim().toLowerCase(),
         phone: formData.phone.trim(),
         password: formData.password,
+        role
       });
       console.log(response.data.result)
 
       setMessage("Account created successfully!");
+
+      setFormData({
+        fullName: "",
+        email: "",
+        phone: "",
+        password: ""
+      })
 
       setTimeout(() => {
         router.push("/login");
@@ -228,59 +217,6 @@ export default function SignupPage() {
                 )}
               </div>
             </div>
-
-            {/* Testimonial carousel */}
-            <div className="relative mt-4 rounded-2xl border border-white/80 bg-white/40 p-4 sm:p-5">
-              <div className="flex gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                  <UserRound size={22} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] leading-[1.7] text-slate-600 sm:text-xs">
-                    &ldquo;{testimonial.quote}&rdquo;
-                  </p>
-                  <p className="mt-2 text-[10px] font-bold text-slate-800">
-                    {testimonial.name}
-                  </p>
-                  <p className="text-[9px] text-slate-500">
-                    {testimonial.role}
-                  </p>
-                  <div className="mt-1 flex gap-0.5 text-emerald-600">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star key={star} size={10} fill="currentColor" />
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="absolute -top-4 right-4 flex gap-2">
-                <button
-                  type="button"
-                  aria-label="Previous testimonial"
-                  onClick={() =>
-                    setTestimonialIndex(
-                      (testimonialIndex + testimonials.length - 1) %
-                      testimonials.length
-                    )
-                  }
-                  className="rounded-full border border-emerald-100 bg-white p-1.5 text-emerald-700 shadow-sm hover:bg-emerald-50"
-                >
-                  <ChevronLeft size={15} />
-                </button>
-                <button
-                  type="button"
-                  aria-label="Next testimonial"
-                  onClick={() =>
-                    setTestimonialIndex(
-                      (testimonialIndex + 1) % testimonials.length
-                    )
-                  }
-                  className="rounded-full border border-emerald-100 bg-white p-1.5 text-emerald-700 shadow-sm hover:bg-emerald-50"
-                >
-                  <ChevronRight size={15} />
-                </button>
-              </div>
-            </div>
           </div>
         </section>
 
@@ -291,8 +227,8 @@ export default function SignupPage() {
             <div className="grid grid-cols-2 border-b border-slate-100">
               <button
                 type="button"
-                onClick={() => setRole("seeker")}
-                className={`flex items-center justify-center gap-2 border-b-2 py-3 text-xs font-semibold transition ${role === "seeker"
+                onClick={() => setRole("jobSeeker")}
+                className={`flex items-center justify-center gap-2 border-b-2 py-3 text-xs font-semibold transition ${role === "jobSeeker"
                   ? "border-emerald-700 text-emerald-800"
                   : "border-transparent text-slate-400 hover:text-slate-700"
                   }`}
@@ -433,151 +369,6 @@ export default function SignupPage() {
                 </p>
               </div>
 
-              {/* Job seeker fields */}
-              {role === "seeker" && (
-                <>
-                  <div>
-                    <label
-                      htmlFor="location"
-                      className="mb-1.5 block text-[11px] font-semibold text-slate-700"
-                    >
-                      Location <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                      <select
-                        id="location"
-                        name="location"
-                        required
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        className="h-10 w-full appearance-none rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-xs text-slate-600 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-                      >
-                        <option value="">Select your location</option>
-                        <option value="Delhi NCR">Delhi NCR</option>
-                        <option value="Bengaluru">Bengaluru</option>
-                        <option value="Mumbai">Mumbai</option>
-                        <option value="Hyderabad">Hyderabad</option>
-                        <option value="Pune">Pune</option>
-                        <option value="Chennai">Chennai</option>
-                        <option value="Remote">Remote</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <fieldset>
-                    <legend className="mb-2 text-[11px] font-semibold text-slate-700">
-                      What are you looking for?
-                    </legend>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setJobType("fulltime")}
-                        className={`flex items-center justify-center gap-2 rounded-lg border px-2 py-2.5 text-[10px] font-semibold transition ${jobType === "fulltime"
-                          ? "border-emerald-700 bg-emerald-700 text-white"
-                          : "border-slate-200 bg-white text-slate-500 hover:bg-emerald-50"
-                          }`}
-                      >
-                        <BriefcaseBusiness size={13} />
-                        Full-time Jobs
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setJobType("freelance")}
-                        className={`flex items-center justify-center gap-2 rounded-lg border px-2 py-2.5 text-[10px] font-semibold transition ${jobType === "freelance"
-                          ? "border-emerald-700 bg-emerald-700 text-white"
-                          : "border-slate-200 bg-white text-slate-500 hover:bg-emerald-50"
-                          }`}
-                      >
-                        <GraduationCap size={14} />
-                        Freelance / Part-time
-                      </button>
-                    </div>
-                  </fieldset>
-
-                  {/* Resume upload */}
-                  <div>
-                    <label
-                      htmlFor="resume"
-                      className="mb-1.5 block text-[11px] font-semibold text-slate-700"
-                    >
-                      Upload Resume <span className="font-normal text-slate-400">(Optional)</span>
-                    </label>
-
-                    <label
-                      htmlFor="resume"
-                      className="flex min-h-22 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50/40 px-4 py-3 text-center transition hover:border-emerald-500 hover:bg-emerald-50/40"
-                    >
-                      <UploadCloud size={21} className="text-emerald-700" />
-                      <span className="mt-2 text-[10px] font-semibold text-slate-700">
-                        {resume ? resume.name : "Drag & drop or browse here"}
-                      </span>
-                      <span className="mt-1 text-[9px] text-slate-400">
-                        PDF, DOC, DOCX (Max 5MB)
-                      </span>
-                      <input
-                        id="resume"
-                        name="resume"
-                        type="file"
-                        accept=".pdf,.doc,.docx"
-                        className="sr-only"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0] ?? null;
-
-                          if (file && file.size > 5 * 1024 * 1024) {
-                            setMessage("Resume must be 5MB or smaller.");
-                            e.target.value = "";
-                            setResume(null);
-                            return;
-                          }
-
-                          setMessage("");
-                          setResume(file);
-                        }}
-                      />
-                    </label>
-                  </div>
-                </>
-              )}
-
-              {role === "employer" && (
-                <>
-                  <div>
-                    <label
-                      htmlFor="companyName"
-                      className="mb-1.5 block text-[11px] font-semibold text-slate-700"
-                    >
-                      Company Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="companyName"
-                      name="companyName"
-                      required
-                      placeholder="Enter your company name"
-                      className="h-10 w-full rounded-lg border border-slate-200 px-3 text-xs outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="companyWebsite"
-                      className="mb-1.5 block text-[11px] font-semibold text-slate-700"
-                    >
-                      Company Website <span className="font-normal text-slate-400">(Optional)</span>
-                    </label>
-                    <input
-                      id="companyWebsite"
-                      name="companyWebsite"
-                      type="url"
-                      placeholder="https://yourcompany.com"
-                      className="h-10 w-full rounded-lg border border-slate-200 px-3 text-xs outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-                    />
-                  </div>
-                </>
-              )}
-
               {/* Status message */}
               {message && (
                 <p
@@ -599,7 +390,7 @@ export default function SignupPage() {
               >
                 {submitting
                   ? "Creating account..."
-                  : role === "seeker"
+                  : role === "jobSeeker"
                     ? "Create Account"
                     : "Create Employer Account"}
                 {!submitting && <ArrowRight size={15} />}

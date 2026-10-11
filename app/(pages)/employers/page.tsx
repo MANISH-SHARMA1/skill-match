@@ -241,7 +241,7 @@ export default function Home() {
 
                         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                             <a
-                                href="/employer/jobs/new"
+                                href="/employer/post-jobs"
                                 className="inline-flex min-h-12 items-center justify-center gap-3 rounded-lg bg-emerald-700 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-800/15 transition hover:-translate-y-0.5 hover:bg-emerald-800"
                             >
                                 Post a Job Now

@@ -53,7 +53,7 @@ const initialCompany: Company = {
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/employer/dashboard" },
-  { label: "Post a Job", icon: BriefcaseBusiness, href: "/post-jobs" },
+  { label: "Post a Job", icon: BriefcaseBusiness, href: "/employer/post-jobs" },
   { label: "My Jobs", icon: Building, href: "/employer/my-jobs" },
   { label: "Candidates", icon: Users, href: "/employer/candidates" },
   { label: "Shortlisted", icon: ShieldCheck, href: "/employer/shortlisted" },
@@ -820,7 +820,7 @@ export default function CompanyProfilePage() {
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 {benefits.map(({ title, description, icon: Icon }, index) => (
                   <article key={`${title}-${index}`} className="rounded-xl border border-slate-100 p-5">
-                    <Icon size={23} className="text-emerald-700" />
+                    {/* <Icon size={23} className="text-emerald-700" /> */}
                     <input
                       value={title}
                       onChange={(e) => updateBenefit(index, "title", e.target.value)}
