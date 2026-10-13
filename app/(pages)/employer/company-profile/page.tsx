@@ -11,6 +11,15 @@ import {
   GraduationCap, Wallet, Leaf, Save, ArrowUpRight,
   BadgeCheck, Building,
 } from "lucide-react";
+import { CompanyRecord } from "@/app/libs/api/companyProfileApi";
+import {
+  getCompanyProfile,
+  createCompanyProfile,
+  updateCompanyProfile,
+  getCompanyTeam,
+  addCompanyTeamMember,
+  deleteCompanyTeamMember,
+} from "@/app/libs/api/companyProfileApi";
 
 type Tab = "Overview" | "About" | "Team" | "Benefits" | "Social Links";
 
@@ -30,6 +39,7 @@ type Company = {
   twitter: string;
   instagram: string;
 };
+
 
 const initialCompany: Company = {
   name: "TechNova Solutions",
@@ -191,6 +201,67 @@ function SectionHeading({
   );
 }
 
+function mapCompanyToUI(record: CompanyRecord): Company {
+  return {
+    ...initialCompany,
+    name: record.name,
+    location: record.location,
+    website: record.website,
+    founded: record.foundedYear?.toString() ?? "",
+    email: record.email,
+    size: record.companySize,
+    phone: record.phone,
+    industry: record.industry,
+    about: record.about,
+  };
+}
+
+const iconMap = {
+  Sparkles,
+  Leaf,
+  Building2,
+  Users,
+} as const;
+
+type CompanyIconName = keyof typeof iconMap;
+
+function mapBenefitsToUI(benefits: string[]) {
+  return benefits.map((title) => ({
+    title,
+    description: "",
+    icon: Sparkles,
+  }));
+}
+
+function mapValuesToUI(
+  values: CompanyRecord["values"]
+) {
+  return values.map((item) => ({
+    title: item.title,
+    text: item.description,
+    icon:
+      item.icon in iconMap
+        ? iconMap[item.icon as CompanyIconName]
+        : Leaf,
+  }));
+}
+
+function mapBenefitsToAPI(
+  benefits: typeof initialBenefits
+): string[] {
+  return benefits.map((item) => item.title.trim()).filter(Boolean);
+}
+
+function mapValuesToAPI(
+  values: typeof initialValues
+) {
+  return values.map((item) => ({
+    title: item.title.trim(),
+    description: item.text.trim(),
+    icon: "Leaf",
+  }));
+}
+
 export default function CompanyProfilePage() {
   const [company, setCompany] = useState<Company>(initialCompany);
   const [activeTab, setActiveTab] = useState<Tab>("Overview");
@@ -217,21 +288,53 @@ export default function CompanyProfilePage() {
     email: "",
   });
 
+
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("skillmatch-company-profile");
-      if (saved) {
-        const data = JSON.parse(saved);
-        if (data.company) setCompany(data.company);
-        if (data.team) setTeam(data.team);
-        if (data.benefits) setBenefits(data.benefits);
-        if (data.values) setValues(data.values);
+    let cancelled = false;
+
+    async function loadCompany() {
+      try {
+        const record = await getCompanyProfile();
+
+        if (cancelled) return;
+
+        setCompany(mapCompanyToUI(record));
+        setEditDraft(mapCompanyToUI(record));
+        setBenefits(mapBenefitsToUI(record.benefits));
+        setValues(mapValuesToUI(record.values));
+
+        setTeam(
+          record.team.map((member) => ({
+            id: member._id,
+            name: member.name,
+            role: member.designation,
+            email: member.email ?? "",
+          }))
+        );
+      } catch (err) {
+        if (cancelled) return;
+
+        const status = (
+          err as { response?: { status?: number } }
+        )?.response?.status;
+
+        if (status === 404) {
+          setNotice("Create your company profile to get started.");
+        } else {
+          setNotice("Unable to load company profile.");
+        }
+      } finally {
+        if (!cancelled) setHydrated(true);
       }
-    } catch {
-      // Fall back to the initial demo data.
     }
-    setHydrated(true);
+
+    void loadCompany();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
 
   useEffect(() => {
     if (!hydrated) return;
@@ -255,15 +358,86 @@ export default function CompanyProfilePage() {
     setEditing(true);
   }
 
-  function saveCompany(e: React.FormEvent) {
+
+  async function saveCompany(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!editDraft.name.trim()) {
-      notify("Company name is required.");
+
+    if (!editDraft.name.trim() || !editDraft.industry.trim()) {
+      notify("Company name and industry are required.");
       return;
     }
-    setCompany({ ...editDraft });
-    setEditing(false);
-    notify("Company profile updated successfully.");
+
+    try {
+      const record = await updateCompanyProfile({
+        name: editDraft.name.trim(),
+        location: editDraft.location.trim(),
+        website: editDraft.website.trim(),
+        email: editDraft.email.trim(),
+        phone: editDraft.phone.trim(),
+        industry: editDraft.industry.trim(),
+        companySize: editDraft.size,
+        foundedYear: editDraft.founded
+          ? Number(editDraft.founded)
+          : null,
+        about: editDraft.about,
+      });
+
+      const mapped = mapCompanyToUI(record);
+
+      setCompany(mapped);
+      setEditDraft(mapped);
+      setEditing(false);
+
+      notify("Company profile updated successfully.");
+    } catch (err) {
+      notify(
+        err instanceof Error ? err.message : "Unable to update company."
+      );
+    }
+  }
+
+  async function createInitialCompany() {
+    try {
+      const record = await createCompanyProfile({
+        name: editDraft.name.trim(),
+        industry: editDraft.industry.trim(),
+        location: editDraft.location.trim(),
+        website: editDraft.website.trim(),
+        email: editDraft.email.trim(),
+        phone: editDraft.phone.trim(),
+        companySize: editDraft.size || "1-10 employees",
+        foundedYear: editDraft.founded
+          ? Number(editDraft.founded)
+          : undefined,
+        about: editDraft.about,
+      });
+
+      const mapped = mapCompanyToUI(record);
+
+      setCompany(mapped);
+      setEditDraft(mapped);
+      setEditing(false);
+
+      notify("Company profile created successfully.");
+    } catch (err) {
+      notify(
+        err instanceof Error ? err.message : "Unable to create company."
+      );
+    }
+  }
+
+  async function removeTeamMember(id: string) {
+    try {
+      await deleteCompanyTeamMember(id);
+
+      setTeam((previous) => previous.filter((member) => member.id !== id));
+
+      notify("Team member removed.");
+    } catch (err) {
+      notify(
+        err instanceof Error ? err.message : "Unable to remove team member."
+      );
+    }
   }
 
   function cancelEditing() {
@@ -271,46 +445,117 @@ export default function CompanyProfilePage() {
     setEditing(false);
   }
 
-  function addTeamMember(e: React.FormEvent) {
+  async function addTeamMember(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
     if (!teamDraft.name.trim() || !teamDraft.role.trim()) {
       notify("Enter the team member's name and role.");
       return;
     }
-    setTeam((prev) => [...prev, { ...teamDraft, id: crypto.randomUUID() }]);
-    setTeamDraft({ name: "", role: "", email: "" });
-    setShowAddTeam(false);
-    notify("Team member added.");
+
+    try {
+      const member = await addCompanyTeamMember({
+        name: teamDraft.name.trim(),
+        role: teamDraft.role.trim(),
+        email: teamDraft.email.trim(),
+      });
+
+      setTeam((previous) => [
+        ...previous,
+        {
+          id: member._id,
+          name: member.name,
+          role: member.designation,
+          email: member.email ?? "",
+        },
+      ]);
+
+      setTeamDraft({ name: "", role: "", email: "" });
+      setShowAddTeam(false);
+
+      notify("Team member added.");
+    } catch (err) {
+      notify(
+        err instanceof Error ? err.message : "Unable to add team member."
+      );
+    }
   }
 
-  function addBenefit() {
+  async function addBenefit() {
     const title = newBenefit.trim();
+
     if (!title) return;
-    setBenefits((prev) => [
-      ...prev,
-      {
-        title,
-        description: "Add a description for this benefit.",
-        icon: Sparkles,
-      },
-    ]);
-    setNewBenefit("");
-    notify("Benefit added.");
+
+    const updated = [...benefits, {
+      title,
+      description: "Add a description for this benefit.",
+      icon: Sparkles,
+    }];
+
+    try {
+      const record = await updateCompanyProfile({
+        benefits: mapBenefitsToAPI(updated),
+      });
+
+      setBenefits(mapBenefitsToUI(record.benefits));
+      setNewBenefit("");
+
+      notify("Benefit added.");
+    } catch (err) {
+      notify(
+        err instanceof Error ? err.message : "Unable to add benefit."
+      );
+    }
   }
 
-  function addValue() {
+  async function addValue() {
     const title = newItem.trim();
+
     if (!title) return;
-    setValues((prev) => [
-      ...prev,
+
+    const updated = [
+      ...values,
       {
         title,
         text: "Add your company value description.",
         icon: Leaf,
       },
-    ]);
-    setNewItem("");
-    notify("Company value added.");
+    ];
+
+    try {
+      const record = await updateCompanyProfile({
+        values: mapValuesToAPI(updated),
+      });
+
+      setValues(mapValuesToUI(record.values));
+      setNewItem("");
+
+      notify("Company value added.");
+    } catch (err) {
+      notify(
+        err instanceof Error ? err.message : "Unable to add company value."
+      );
+    }
+  }
+
+  async function saveBenefitsAndValues() {
+    try {
+      const record = await updateCompanyProfile({
+        benefits: mapBenefitsToAPI(benefits),
+        values: mapValuesToAPI(values),
+      });
+
+      setBenefits(mapBenefitsToUI(record.benefits));
+      setValues(mapValuesToUI(record.values));
+
+      notify("Benefits and company values saved.");
+    } catch (err) {
+      notify(
+        err instanceof Error
+          ? err.message
+          : "Unable to save benefits and values."
+      );
+    }
   }
 
   function updateValue(index: number, field: "title" | "text", value: string) {
@@ -338,15 +583,15 @@ export default function CompanyProfilePage() {
     key: keyof Company;
     icon: typeof Building2;
   }[] = [
-    { label: "Company Name", key: "name", icon: Building2 },
-    { label: "Location", key: "location", icon: MapPin },
-    { label: "Website", key: "website", icon: Globe },
-    { label: "Founded", key: "founded", icon: CalendarDays },
-    { label: "Email", key: "email", icon: Mail },
-    { label: "Company Size", key: "size", icon: Users },
-    { label: "Phone", key: "phone", icon: Phone },
-    { label: "Industry", key: "industry", icon: BriefcaseBusiness },
-  ];
+      { label: "Company Name", key: "name", icon: Building2 },
+      { label: "Location", key: "location", icon: MapPin },
+      { label: "Website", key: "website", icon: Globe },
+      { label: "Founded", key: "founded", icon: CalendarDays },
+      { label: "Email", key: "email", icon: Mail },
+      { label: "Company Size", key: "size", icon: Users },
+      { label: "Phone", key: "phone", icon: Phone },
+      { label: "Industry", key: "industry", icon: BriefcaseBusiness },
+    ];
 
   return (
     <div className="min-h-screen bg-[#f6f9f8] font-sans text-slate-800">
@@ -371,9 +616,8 @@ export default function CompanyProfilePage() {
       <div className="mx-auto flex max-w-[1600px]">
         {/* Sidebar */}
         <aside
-          className={`fixed inset-y-16 left-0 z-30 flex w-64 flex-col border-r border-slate-100 bg-white p-4 transition-transform lg:sticky lg:top-0 lg:h-screen lg:w-64 lg:translate-x-0 ${
-            mobileSidebar ? "translate-x-0" : "-translate-x-full"
-          }`}
+          className={`fixed inset-y-16 left-0 z-30 flex w-64 flex-col border-r border-slate-100 bg-white p-4 transition-transform lg:sticky lg:top-0 lg:h-screen lg:w-64 lg:translate-x-0 ${mobileSidebar ? "translate-x-0" : "-translate-x-full"
+            }`}
         >
           <div className="hidden items-center gap-3 px-2 py-3 lg:flex">
             <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-50 text-emerald-800">
@@ -398,11 +642,10 @@ export default function CompanyProfilePage() {
                     // Navigate to the relevant application route.
                     window.location.href = href;
                   }}
-                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-medium transition ${
-                    selected
-                      ? "bg-[#e7f5ee] text-emerald-800"
-                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-                  }`}
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs font-medium transition ${selected
+                    ? "bg-[#e7f5ee] text-emerald-800"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                    }`}
                 >
                   <Icon size={16} />
                   {label}
@@ -498,11 +741,10 @@ export default function CompanyProfilePage() {
                 type="button"
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`shrink-0 border-b-2 px-4 py-3 text-xs font-semibold transition ${
-                  activeTab === tab
-                    ? "border-emerald-700 text-emerald-800"
-                    : "border-transparent text-slate-500 hover:text-slate-800"
-                }`}
+                className={`shrink-0 border-b-2 px-4 py-3 text-xs font-semibold transition ${activeTab === tab
+                  ? "border-emerald-700 text-emerald-800"
+                  : "border-transparent text-slate-500 hover:text-slate-800"
+                  }`}
               >
                 {tab}
               </button>

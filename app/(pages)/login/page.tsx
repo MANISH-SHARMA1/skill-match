@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { axiosClient } from "@/utils/axiosClient";
-// import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 
 interface FormData {
   identifier: string;
@@ -39,7 +39,7 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const router = useRouter();
-  // const { login } = useAuth();
+  const { login } = useAuth();
 
   const [formData, setFormData] = useState<FormData>({
     identifier: "",
@@ -91,8 +91,8 @@ export default function LoginPage() {
         password: formData.password,
         rememberMe: formData.rememberMe,
       })
-      console.log(response.data.result)
-      // login(response.data.result.accessToken)
+      // console.log(response.data.result)
+      login(response.data.result.accessToken)
 
       setFormData({
         identifier: "",

@@ -40,6 +40,7 @@ const EducationSchema = new Schema(
     startDate: Date,
     endDate: Date,
     grade: { type: String, default: "" },
+    description: { type: String, default: "" },
   },
   { _id: true }
 );

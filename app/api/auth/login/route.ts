@@ -33,10 +33,10 @@ export async function POST(req: NextRequest) {
     if (!user) {
       return error(400, "No such user found.");
     }
-
+    console.log("User found:", user); // Debugging line
     // Check if password matches
     const matchedPassword = await bcrypt.compare(password, user.passwordHash);
-
+    console.log("Matched Password:", matchedPassword); // Debugging line
     if (!matchedPassword) {
       return error(403, "Incorrect password.");
     }
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     console.log(e);
     // Handles any unexpected errors
-    return error(500, "Something went wrong. www");
+    return error(500, "Something went wrong.");
   }
 }
 

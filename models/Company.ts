@@ -3,6 +3,7 @@ import { Schema, models, model } from "mongoose";
 const TeamMemberSchema = new Schema(
   {
     name: { type: String, required: true, trim: true },
+    email: { type: String, lowercase: true, trim: true, default: "" },
     designation: { type: String, default: "" },
     avatar: { type: String, default: "" },
     linkedIn: { type: String, default: "" },

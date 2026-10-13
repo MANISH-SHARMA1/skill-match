@@ -5,10 +5,21 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   UserRound, FileText, BriefcaseBusiness, GraduationCap,
   Code2, Plus, X, Check, Pencil, Trash2, Eye, Download,
-  Upload, MoreVertical, Lightbulb, ShieldCheck, ExternalLink,
+  Upload, MoreVertical, Lightbulb, ShieldCheck,
   ChevronRight, Save, Sparkles, CalendarDays, Building2,
-  MapPin, Link as LinkIcon, LoaderCircle, FileCheck2,
+  MapPin, Link as FileCheck2,
 } from "lucide-react";
+import { CATEGORY_TO_GROUP, createCandidateSkill, deleteCandidateSkill, fetchCandidateSkills, GROUP_TO_CATEGORY, SkillCategory } from "@/app/libs/api/candidateSkills";
+import {
+  fetchCandidateExperience,
+  createCandidateExperience,
+  updateCandidateExperience,
+  deleteCandidateExperience,
+  fetchCandidateEducation,
+  createCandidateEducation,
+  updateCandidateEducation,
+  deleteCandidateEducation,
+} from "@/app/libs/api/candidateExperienceEducation";
 
 type Tab = "skills" | "resume" | "experience" | "education";
 
@@ -177,6 +188,16 @@ export default function ProfileSettingsPage() {
   const [newGroupTitle, setNewGroupTitle] = useState("");
   const [showNewGroup, setShowNewGroup] = useState(false);
 
+
+  const [skillIds, setSkillIds] = useState<Record<string, string>>({});
+  const [skillsLoading, setSkillsLoading] = useState(true);
+  const [skillsSaving, setSkillsSaving] = useState(false);
+
+  function skillKey(category: SkillCategory, name: string) {
+    return `${category}:${name.trim().toLowerCase()}`;
+  }
+
+
   const [experienceForm, setExperienceForm] =
     useState<Omit<Experience, "id">>(emptyExperience);
   const [educationForm, setEducationForm] =
@@ -194,6 +215,103 @@ export default function ProfileSettingsPage() {
 
   const fileRef = useRef<HTMLInputElement>(null);
   const resumeUrlRef = useRef<string | null>(null);
+
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSkills() {
+      try {
+        const savedSkills = await fetchCandidateSkills();
+
+        if (cancelled) return;
+
+        const nextIds: Record<string, string> = {};
+
+        const nextGroups: SkillGroup[] = [
+          { id: "technical", title: "Technical Skills", skills: [] },
+          { id: "tools", title: "Tools", skills: [] },
+          { id: "soft-skills", title: "Soft Skills", skills: [] },
+          { id: "other", title: "Other", skills: [] },
+        ];
+
+        for (const skill of savedSkills) {
+          const groupId = CATEGORY_TO_GROUP[skill.category];
+          const group = nextGroups.find((item) => item.id === groupId);
+
+          if (!group) continue;
+
+          group.skills.push(skill.name);
+          nextIds[skillKey(skill.category, skill.name)] = skill._id;
+        }
+
+        setGroups(nextGroups);
+        setSkillIds(nextIds);
+      } catch (err) {
+        if (!cancelled) {
+          setNotice(
+            err instanceof Error ? err.message : "Unable to load skills"
+          );
+        }
+      } finally {
+        if (!cancelled) setSkillsLoading(false);
+      }
+    }
+
+    async function loadExperienceAndEducation() {
+      try {
+        const [savedExperience, savedEducation] = await Promise.all([
+          fetchCandidateExperience(),
+          fetchCandidateEducation(),
+        ])
+
+        if (cancelled) return;
+
+        setExperience(
+          savedExperience.map((item) => ({
+            id: item._id,
+            title: item.jobTitle,
+            company: item.companyName,
+            location: item.location ?? "",
+            start: item.startDate
+              ? item.startDate.slice(0, 10)
+              : "",
+            end: item.endDate ? item.endDate.slice(0, 10) : "",
+            current: item.isCurrent,
+            description: item.description ?? ""
+          }))
+        );
+
+        setEducation(
+          savedEducation.map((item) => ({
+            id: item._id,
+            degree: item.degree ?? "",
+            school: item.institution,
+            field: item.fieldOfStudy ?? "",
+            start: item.startDate ? item.startDate.slice(0, 10) : "",
+            end: item.endDate ? item.endDate.slice(0, 10) : "",
+            description: item.description ?? ""
+          }))
+        )
+      } catch (err) {
+        if (!cancelled) {
+          setNotice(
+            err instanceof Error
+              ? err.message
+              : "Unable to load experience and education"
+          );
+        }
+      }
+    }
+
+    void loadSkills();
+    void loadExperienceAndEducation();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
 
   // Load saved browser data.
   useEffect(() => {
@@ -251,36 +369,106 @@ export default function ProfileSettingsPage() {
     window.setTimeout(() => setNotice(""), 3000);
   }
 
-  function addSkill() {
-    const skill = newSkill.trim();
-    if (!skill) return;
+  async function addSkill() {
+    const name = newSkill.trim();
 
-    const target = groups.find((g) => g.id === skillGroup);
+    if (!name) return;
+
+    const target = groups.find((group) => group.id === skillGroup);
+
     if (!target) return;
 
-    if (target.skills.some((s) => s.toLowerCase() === skill.toLowerCase())) {
+    if (
+      target.skills.some(
+        (skill) => skill.toLowerCase() === name.toLowerCase()
+      )
+    ) {
       notify("This skill already exists.");
       return;
     }
 
-    setGroups((prev) =>
-      prev.map((g) =>
-        g.id === skillGroup ? { ...g, skills: [...g.skills, skill] } : g
-      )
-    );
-    setNewSkill("");
-    notify("Skill added successfully.");
+    const category = GROUP_TO_CATEGORY[skillGroup];
+
+    if (!category) {
+      notify("Invalid skill category.");
+      return;
+    }
+
+    setSkillsSaving(true);
+
+    try {
+      const savedSkill = await createCandidateSkill({
+        name,
+        category,
+        level: "Intermediate",
+      });
+
+      setGroups((previous) =>
+        previous.map((group) =>
+          group.id === skillGroup
+            ? { ...group, skills: [...group.skills, savedSkill.name] }
+            : group
+        )
+      );
+
+      setSkillIds((previous) => ({
+        ...previous,
+        [skillKey(savedSkill.category, savedSkill.name)]: savedSkill._id,
+      }));
+
+      setNewSkill("");
+      notify("Skill added successfully.");
+    } catch (err) {
+      notify(
+        err instanceof Error ? err.message : "Unable to add skill."
+      );
+    } finally {
+      setSkillsSaving(false);
+    }
   }
 
-  function removeSkill(groupId: string, skill: string) {
-    setGroups((prev) =>
-      prev.map((g) =>
-        g.id === groupId
-          ? { ...g, skills: g.skills.filter((s) => s !== skill) }
-          : g
-      )
-    );
-    notify("Skill removed.");
+  async function removeSkill(groupId: string, name: string) {
+    const category = GROUP_TO_CATEGORY[groupId];
+
+    if (!category) {
+      notify("Invalid skill category.");
+      return;
+    }
+
+    const key = skillKey(category, name);
+    const skillId = skillIds[key];
+
+    if (!skillId) {
+      notify("Could not identify this saved skill. Reload the page.");
+      return;
+    }
+
+    try {
+      await deleteCandidateSkill(skillId);
+
+      setGroups((previous) =>
+        previous.map((group) =>
+          group.id === groupId
+            ? {
+              ...group,
+              skills: group.skills.filter((skill) => skill !== name),
+            }
+            : group
+        )
+      );
+
+      setSkillIds((previous) => {
+        const next = { ...previous };
+        delete next[key];
+        return next;
+      });
+
+      notify("Skill removed.");
+    } catch (err) {
+      notify(
+        err instanceof Error ? err.message : "Unable to remove skill."
+      );
+    }
   }
 
   function renameGroup(groupId: string) {
@@ -367,26 +555,78 @@ export default function ProfileSettingsPage() {
     }
   }
 
-  function saveExperience(e: React.FormEvent) {
+  async function saveExperience(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    if (editingExperience) {
-      setExperience((prev) =>
-        prev.map((item) =>
-          item.id === editingExperience
-            ? { ...experienceForm, id: editingExperience }
-            : item
-        )
-      );
-      notify("Experience updated.");
-    } else {
-      setExperience((prev) => [...prev, { ...experienceForm, id: uid() }]);
-      notify("Experience added.");
+    const input = {
+      title: experienceForm.title.trim(),
+      company: experienceForm.company.trim(),
+      location: experienceForm.location.trim(),
+      start: experienceForm.start,
+      end: experienceForm.current ? "" : experienceForm.end,
+      current: experienceForm.current,
+      description: experienceForm.description.trim(),
+    };
+
+    if (!input.title || !input.company || !input.start) {
+      notify("Job title, company, and start date are required.");
+      return;
     }
 
-    setExperienceForm(emptyExperience);
-    setEditingExperience(null);
-    setShowExperienceForm(false);
+    try {
+      if (editingExperience) {
+        const saved = await updateCandidateExperience(
+          editingExperience,
+          input
+        );
+
+        setExperience((prev) =>
+          prev.map((item) =>
+            item.id === editingExperience
+              ? {
+                ...item,
+                id: saved._id,
+                title: saved.jobTitle,
+                company: saved.companyName,
+                location: saved.location ?? "",
+                start: saved.startDate.slice(0, 10),
+                end: saved.endDate?.slice(0, 10) ?? "",
+                current: saved.isCurrent,
+                description: saved.description ?? "",
+              }
+              : item
+          )
+        );
+
+        notify("Experience updated.");
+      } else {
+        const saved = await createCandidateExperience(input);
+
+        setExperience((prev) => [
+          ...prev,
+          {
+            id: saved._id,
+            title: saved.jobTitle,
+            company: saved.companyName,
+            location: saved.location ?? "",
+            start: saved.startDate.slice(0, 10),
+            end: saved.endDate?.slice(0, 10) ?? "",
+            current: saved.isCurrent,
+            description: saved.description ?? "",
+          },
+        ]);
+
+        notify("Experience added.");
+      }
+
+      setExperienceForm(emptyExperience);
+      setEditingExperience(null);
+      setShowExperienceForm(false);
+    } catch (err) {
+      notify(
+        err instanceof Error ? err.message : "Unable to save experience."
+      );
+    }
   }
 
   function editExperience(item: Experience) {
@@ -403,26 +643,87 @@ export default function ProfileSettingsPage() {
     setShowExperienceForm(true);
   }
 
-  function saveEducation(e: React.FormEvent) {
+  async function removeExperience(id: string) {
+    try {
+      await deleteCandidateExperience(id);
+
+      setExperience((prev) => prev.filter((item) => item.id !== id));
+      notify("Experience deleted.");
+    } catch (err) {
+      notify(
+        err instanceof Error ? err.message : "Unable to delete experience."
+      );
+    }
+  }
+
+  async function saveEducation(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    if (editingEducation) {
-      setEducation((prev) =>
-        prev.map((item) =>
-          item.id === editingEducation
-            ? { ...educationForm, id: editingEducation }
-            : item
-        )
-      );
-      notify("Education updated.");
-    } else {
-      setEducation((prev) => [...prev, { ...educationForm, id: uid() }]);
-      notify("Education added.");
+    const input = {
+      degree: educationForm.degree.trim(),
+      school: educationForm.school.trim(),
+      field: educationForm.field.trim(),
+      start: educationForm.start,
+      end: educationForm.end,
+      description: educationForm.description.trim(),
+    };
+
+    if (!input.school) {
+      notify("Institution name is required.");
+      return;
     }
 
-    setEducationForm(emptyEducation);
-    setEditingEducation(null);
-    setShowEducationForm(false);
+    try {
+      if (editingEducation) {
+        const saved = await updateCandidateEducation(
+          editingEducation,
+          input
+        );
+
+        setEducation((prev) =>
+          prev.map((item) =>
+            item.id === editingEducation
+              ? {
+                id: saved._id,
+                degree: saved.degree ?? "",
+                school: saved.institution,
+                field: saved.fieldOfStudy ?? "",
+                start: saved.startDate?.slice(0, 10) ?? "",
+                end: saved.endDate?.slice(0, 10) ?? "",
+                description: saved.description ?? "",
+              }
+              : item
+          )
+        );
+
+        notify("Education updated.");
+      } else {
+        const saved = await createCandidateEducation(input);
+
+        setEducation((prev) => [
+          ...prev,
+          {
+            id: saved._id,
+            degree: saved.degree ?? "",
+            school: saved.institution,
+            field: saved.fieldOfStudy ?? "",
+            start: saved.startDate?.slice(0, 10) ?? "",
+            end: saved.endDate?.slice(0, 10) ?? "",
+            description: saved.description ?? "",
+          },
+        ]);
+
+        notify("Education added.");
+      }
+
+      setEducationForm(emptyEducation);
+      setEditingEducation(null);
+      setShowEducationForm(false);
+    } catch (err) {
+      notify(
+        err instanceof Error ? err.message : "Unable to save education."
+      );
+    }
   }
 
   function editEducation(item: Education) {
@@ -436,6 +737,20 @@ export default function ProfileSettingsPage() {
     });
     setEditingEducation(item.id);
     setShowEducationForm(true);
+  }
+
+
+  async function removeEducation(id: string) {
+    try {
+      await deleteCandidateEducation(id);
+
+      setEducation((prev) => prev.filter((item) => item.id !== id));
+      notify("Education deleted.");
+    } catch (err) {
+      notify(
+        err instanceof Error ? err.message : "Unable to delete education."
+      );
+    }
   }
 
   return (
@@ -473,11 +788,10 @@ export default function ProfileSettingsPage() {
               key={id}
               type="button"
               onClick={() => setActiveTab(id)}
-              className={`flex items-center justify-center gap-2 border-b-2 px-3 py-4 text-xs font-semibold transition sm:text-sm ${
-                activeTab === id
-                  ? "border-emerald-700 bg-emerald-50/40 text-emerald-800"
-                  : "border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-              }`}
+              className={`flex items-center justify-center gap-2 border-b-2 px-3 py-4 text-xs font-semibold transition sm:text-sm ${activeTab === id
+                ? "border-emerald-700 bg-emerald-50/40 text-emerald-800"
+                : "border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                }`}
             >
               <Icon size={16} />
               {label}
@@ -543,7 +857,8 @@ export default function ProfileSettingsPage() {
               />
               <button
                 type="submit"
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-2.5 text-xs font-semibold text-white hover:bg-emerald-800"
+                disabled={skillsSaving}
+                className={'inline-flex items-center ' + (skillsSaving ? "opacity-50 cursor-not-allowed" : "hover:bg-emerald-800") + " justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-2.5 text-xs font-semibold text-white"}
               >
                 <Plus size={15} /> Add New Skill
               </button>
@@ -847,7 +1162,7 @@ export default function ProfileSettingsPage() {
                       <button type="button" onClick={() => editExperience(item)} aria-label="Edit experience" className="rounded-lg p-2 text-slate-500 hover:bg-emerald-50 hover:text-emerald-700">
                         <Pencil size={15} />
                       </button>
-                      <button type="button" onClick={() => { setExperience((p) => p.filter((x) => x.id !== item.id)); notify("Experience deleted."); }} aria-label="Delete experience" className="rounded-lg p-2 text-slate-500 hover:bg-red-50 hover:text-red-600">
+                      <button type="button" onClick={() => removeExperience(item.id)} aria-label="Delete experience" className="rounded-lg p-2 text-slate-500 hover:bg-red-50 hover:text-red-600">
                         <Trash2 size={15} />
                       </button>
                     </div>
@@ -938,7 +1253,7 @@ export default function ProfileSettingsPage() {
                       <button type="button" onClick={() => editEducation(item)} aria-label="Edit education" className="rounded-lg p-2 text-slate-500 hover:bg-emerald-50 hover:text-emerald-700">
                         <Pencil size={15} />
                       </button>
-                      <button type="button" onClick={() => { setEducation((p) => p.filter((x) => x.id !== item.id)); notify("Education deleted."); }} aria-label="Delete education" className="rounded-lg p-2 text-slate-500 hover:bg-red-50 hover:text-red-600">
+                      <button type="button" onClick={() => removeEducation(item.id)} aria-label="Delete education" className="rounded-lg p-2 text-slate-500 hover:bg-red-50 hover:text-red-600">
                         <Trash2 size={15} />
                       </button>
                     </div>
