@@ -24,6 +24,7 @@ const dbConnect = async () => {
 
     // Log successful connection
     console.log("<<<:::MONGODB CONNECTED:::>>>");
+    preloadModels();
   } catch (error) {
     // Log error and exit process
     console.error("MongoDB Connection Error:", error);
@@ -32,3 +33,16 @@ const dbConnect = async () => {
 };
 
 export default dbConnect;
+
+async function preloadModels() {
+  try {
+    await import("@/models/Users");
+    await import("@/models/CandidateProfile");
+    await import("@/models/Company");
+    await import("@/models/Job");
+
+    console.log("✅ All models preloaded");
+  } catch (err) {
+    console.error("❌ Error preloading models:", err);
+  }
+}
