@@ -4,22 +4,30 @@
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  ArrowLeft, BriefcaseBusiness, MapPin, IndianRupee, Clock,
-  Users, Plus, X, Save, Send, Eye, CheckCircle2, FileText
+  BriefcaseBusiness, MapPin, IndianRupee, Clock,
+  Plus, X, Save, Send, Eye, CheckCircle2, FileText,
+  Check
 } from "lucide-react";
-import Link from "next/link";
-import { Job, getJobs, saveJob } from "../../../libs/jobs";
+import { Job } from "../../../libs/jobs";
+import {
+  JobRecord,
+  createEmployerJob,
+  getEmployerJob,
+  updateEmployerJob,
+  fromJobRecord,
+  JobFormInput,
+} from "@/app/libs/api/jobsApi";
 
 const initialForm = {
   title: "",
   department: "",
   location: "",
-  workplace: "On-site" as Job["workplace"],
-  employmentType: "Full-time",
-  experience: "1–3 years",
+  workplace: "On-site" as JobRecord["workplace"],
+  employmentType: "Full-time" as JobRecord["employmentType"],
+  experience: "1–3 years" as JobRecord["experience"],
   salaryMin: "300000",
   salaryMax: "600000",
-  salaryPeriod: "Yearly" as Job["salaryPeriod"],
+  salaryPeriod: "Yearly" as JobRecord["salary"]["period"],
   openings: "1",
   description: "",
   responsibilities: "",
@@ -43,44 +51,51 @@ function PostJobForm() {
   const searchParams = useSearchParams();
   const editId = searchParams.get("edit");
 
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState<JobFormInput>(initialForm);
   const [skillInput, setSkillInput] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false)
+  const [notice, setNotice] = useState("");
+
+  function notify(message: string) {
+    setNotice(message);
+    window.setTimeout(() => setNotice(""), 2800);
+  }
 
   useEffect(() => {
-    if (!editId) {
-      setLoaded(true);
-      return;
+    let cancelled = false;
+
+    async function loadJob() {
+      if (!editId) {
+        setLoaded(true);
+        return;
+      }
+
+      try {
+        const job = await getEmployerJob(editId);
+
+        if (cancelled) return;
+
+        setForm(fromJobRecord(job));
+      } catch (error) {
+        if (cancelled) return;
+
+        setMessage(
+          "Unable to load this job. It may have been deleted or you may not have permission to edit it."
+        );
+      } finally {
+        if (!cancelled) setLoaded(true);
+      }
     }
 
-    const job = getJobs().find((item: any) => item.id === editId);
-    if (!job) {
-      setMessage("Job not found. You can create a new job instead.");
-      setLoaded(true);
-      return;
-    }
+    void loadJob();
 
-    setForm({
-      title: job.title,
-      department: job.department,
-      location: job.location,
-      workplace: job.workplace,
-      employmentType: job.employmentType,
-      experience: job.experience,
-      salaryMin: String(job.salaryMin),
-      salaryMax: String(job.salaryMax),
-      salaryPeriod: job.salaryPeriod,
-      openings: String(job.openings),
-      description: job.description,
-      responsibilities: job.responsibilities,
-      requirements: job.requirements,
-      skills: job.skills,
-      benefits: job.benefits,
-    });
-    setLoaded(true);
+    return () => {
+      cancelled = true;
+    };
   }, [editId]);
 
   function setField<K extends keyof typeof initialForm>(
@@ -140,29 +155,43 @@ function PostJobForm() {
     return Object.keys(next).length === 0;
   }
 
-  function submitJob(status: Job["status"]) {
+  async function submitJob(status: "Draft" | "Active") {
+    if (saving) return;
+
     if (!validate()) {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
-    const existing = editId
-      ? getJobs().find((job) => job.id === editId)
-      : undefined;
+    setSaving(true);
+    setMessage("");
 
-    const job: Job = {
-      id: existing?.id ?? crypto.randomUUID(),
-      ...form,
-      salaryMin: Number(form.salaryMin),
-      salaryMax: Number(form.salaryMax),
-      openings: Number(form.openings),
-      status,
-      applicants: existing?.applicants ?? 0,
-      createdAt: existing?.createdAt ?? new Date().toISOString(),
-    };
+    try {
+      let response
+      if (editId) {
+        response = await updateEmployerJob(editId, form, status);
+      } else {
+        response = await createEmployerJob(form, status);
+      }
 
-    saveJob(job);
-    router.push("/employer/jobs");
+      notify("Job created successfully")
+      setForm(initialForm)
+      // router.push("/employer/jobs");
+      // router.refresh();
+    } catch (error) {
+      const err = error as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+
+      setMessage(
+        err.response?.data?.message ??
+        err.message ??
+        "Unable to save the job. Please try again."
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (!loaded) {
@@ -174,7 +203,7 @@ function PostJobForm() {
   }
 
   const inputClass =
-    "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100";
+    "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-gray-500 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100";
   const labelClass = "mb-1.5 block text-xs font-semibold text-slate-700";
 
   return (
@@ -215,7 +244,7 @@ function PostJobForm() {
                 <BriefcaseBusiness size={26} />
               </div>
               <div>
-                <h2 className="text-xl font-bold">{form.title || "Job title"}</h2>
+                <h2 className="text-xl text-black font-bold">{form.title || "Job title"}</h2>
                 <p className="mt-1 text-sm text-slate-500">
                   {form.department || "Department"} · {form.employmentType}
                 </p>
@@ -227,17 +256,17 @@ function PostJobForm() {
               </div>
             </div>
             <hr className="my-6 border-slate-100" />
-            <h3 className="text-sm font-bold">Job Description</h3>
+            <h3 className="text-sm text-black font-bold">Job Description</h3>
             <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-600">{form.description || "Your job description will appear here."}</p>
-            <h3 className="mt-6 text-sm font-bold">Responsibilities</h3>
+            <h3 className="mt-6 text-sm text-black font-bold">Responsibilities</h3>
             <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-600">{form.responsibilities || "No responsibilities added."}</p>
-            <h3 className="mt-6 text-sm font-bold">Requirements</h3>
+            <h3 className="mt-6 text-sm text-black font-bold">Requirements</h3>
             <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-600">{form.requirements || "Your requirements will appear here."}</p>
-            <h3 className="mt-6 text-sm font-bold">Required Skills</h3>
+            <h3 className="mt-6 text-sm text-black font-bold">Required Skills</h3>
             <div className="mt-3 flex flex-wrap gap-2">
               {form.skills.map((skill) => <span key={skill} className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs text-emerald-800">{skill}</span>)}
             </div>
-            <h3 className="mt-6 text-sm font-bold">Benefits</h3>
+            <h3 className="mt-6 text-sm text-black font-bold">Benefits</h3>
             <div className="mt-3 flex flex-wrap gap-2">
               {form.benefits.map((benefit) => <span key={benefit} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs text-slate-600">{benefit}</span>)}
             </div>
@@ -258,7 +287,7 @@ function PostJobForm() {
               <div className="mb-5 flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800"><FileText size={19} /></div>
                 <div>
-                  <h2 className="text-sm font-bold">Basic Information</h2>
+                  <h2 className="text-black text-sm font-bold">Basic Information</h2>
                   <p className="mt-1 text-xs text-slate-500">Start with the role and team details.</p>
                 </div>
               </div>
@@ -276,7 +305,7 @@ function PostJobForm() {
                 </div>
                 <div>
                   <label className={labelClass}>Employment Type</label>
-                  <select value={form.employmentType} onChange={(e) => setField("employmentType", e.target.value)} className={inputClass}>
+                  <select value={form.employmentType} onChange={(e) => setField("employmentType", e.target.value as JobRecord["employmentType"])} className={inputClass}>
                     {["Full-time", "Part-time", "Contract", "Internship", "Freelance", "Temporary"].map((v) => <option key={v}>{v}</option>)}
                   </select>
                 </div>
@@ -296,7 +325,7 @@ function PostJobForm() {
                 </div>
                 <div>
                   <label className={labelClass}>Experience Required</label>
-                  <select value={form.experience} onChange={(e) => setField("experience", e.target.value)} className={inputClass}>
+                  <select value={form.experience} onChange={(e) => setField("experience", e.target.value as JobRecord["experience"])} className={inputClass}>
                     {["Fresher", "0–1 years", "1–3 years", "3–5 years", "5–8 years", "8+ years"].map((v) => <option key={v}>{v}</option>)}
                   </select>
                 </div>
@@ -313,7 +342,7 @@ function PostJobForm() {
               <div className="mb-5 flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800"><IndianRupee size={19} /></div>
                 <div>
-                  <h2 className="text-sm font-bold">Compensation</h2>
+                  <h2 className="text-black text-sm font-bold">Compensation</h2>
                   <p className="mt-1 text-xs text-slate-500">Enter a realistic salary range in INR.</p>
                 </div>
               </div>
@@ -340,7 +369,7 @@ function PostJobForm() {
 
             {/* Description */}
             <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-7">
-              <h2 className="text-sm font-bold">Job Description & Requirements</h2>
+              <h2 className="text-black text-sm font-bold">Job Description & Requirements</h2>
               <p className="mt-1 text-xs text-slate-500">Give candidates a clear picture of the role.</p>
               <div className="mt-5 space-y-4">
                 <div>
@@ -365,7 +394,7 @@ function PostJobForm() {
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800"><CheckCircle2 size={19} /></div>
                 <div>
-                  <h2 className="text-sm font-bold">Skills & Benefits</h2>
+                  <h2 className="text-black text-sm font-bold">Skills & Benefits</h2>
                   <p className="mt-1 text-xs text-slate-500">Select relevant skills and workplace benefits.</p>
                 </div>
               </div>
@@ -411,16 +440,41 @@ function PostJobForm() {
 
             {/* Actions */}
             <div className="sticky bottom-0 flex flex-col-reverse gap-3 border-t border-slate-100 bg-[#f6f9f8]/95 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
-              <button type="button" onClick={() => submitJob("Draft")} className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-5 py-3 text-xs font-semibold text-slate-600 hover:bg-slate-50">
-                <Save size={15} /> Save as Draft
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => submitJob("Draft")}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-5 py-3 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                <Save size={15} />
+                {saving ? "Saving..." : "Save as Draft"}
               </button>
-              <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-800 px-6 py-3 text-xs font-semibold text-white shadow-sm hover:bg-emerald-900">
-                <Send size={15} /> {editId ? "Save & Publish" : "Publish Job"}
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-800 px-6 py-3 text-xs font-semibold text-white shadow-sm hover:bg-emerald-900"
+              >
+                <Send size={15} />
+                {saving
+                  ? "Publishing..."
+                  : editId
+                    ? "Save & Publish"
+                    : "Publish Job"}
               </button>
             </div>
           </form>
         )}
       </div>
+
+      {notice && (
+        <div role="status" className="fixed bottom-5 right-5 z-70 flex max-w-sm items-center gap-2 rounded-xl border border-emerald-100 bg-white px-4 py-3 text-xs font-semibold text-emerald-800 shadow-xl">
+          <Check size={16} />
+          {notice}
+          <button type="button" onClick={() => setNotice("")} aria-label="Dismiss notification">
+            <X size={14} />
+          </button>
+        </div>
+      )}
     </main>
   );
 }

@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
       passwordHash: hashedPassword,
       role
     });
-console.log("::::", res)
+
     // Return success response
     return success(201, "Registered successfully.");
   } catch (e) {

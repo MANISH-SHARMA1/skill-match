@@ -3,26 +3,40 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Search, Zap } from "lucide-react";
+import toast from "react-hot-toast";
+import { axiosClient } from "@/utils/axiosClient";
+import { useAuth } from "@/context/AuthContext";
 
 const navItems = [
     { label: "Home", href: "/" },
     { label: "Jobs", href: "/jobs" },
     { label: "Candidates", href: "/candidates" },
     { label: "For Employers", href: "/employers" },
-    { label: "For Job Seekers", href: "/job-seekers" },
+    // { label: "For Job Seekers", href: "/job-seekers" },
 ];
 
 function Navbar() {
     const pathname = usePathname();
+    const { logout, isAuthenticated } = useAuth()
 
     const isActive = (href: string) => {
         if (href === "/") return pathname === "/";
         return pathname === href || pathname.startsWith(`${href}/`);
     };
 
+    const handleLogout = async () => {
+        try {
+            const res = await axiosClient.get("/api/auth/login")
+            logout();
+            toast.success(res.data.result)
+        } catch (e) {
+            console.log("at logout", e)
+        }
+    }
+
     return (
         <nav className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
-            <div className="mx-auto flex h-20 max-w-[1240px] items-center justify-between px-5 lg:px-8">
+            <div className="mx-auto flex h-20 max-w-310 items-center justify-between px-5 lg:px-8">
 
                 {/* Logo */}
                 <Link href="/" className="flex shrink-0 items-center gap-2.5">
@@ -55,16 +69,16 @@ function Navbar() {
                                 href={item.href}
                                 aria-current={active ? "page" : undefined}
                                 className={`relative flex h-20 items-center whitespace-nowrap text-sm font-semibold transition-colors duration-200 ${active
-                                        ? "text-[#078b5a]"
-                                        : "text-slate-600 hover:text-[#078b5a]"
+                                    ? "text-[#078b5a]"
+                                    : "text-slate-600 hover:text-[#078b5a]"
                                     }`}
                             >
                                 {item.label}
 
                                 <span
-                                    className={`absolute bottom-0 left-0 right-0 mx-auto h-[3px] rounded-t-full bg-[#078b5a] transition-all duration-200 ${active
-                                            ? "w-full opacity-100"
-                                            : "w-0 opacity-0"
+                                    className={`absolute bottom-0 left-0 right-0 mx-auto h-0.75 rounded-t-full bg-[#078b5a] transition-all duration-200 ${active
+                                        ? "w-full opacity-100"
+                                        : "w-0 opacity-0"
                                         }`}
                                 />
                             </Link>
@@ -74,13 +88,21 @@ function Navbar() {
 
                 {/* Actions */}
                 <div className="flex shrink-0 items-center gap-2.5 sm:gap-3">
-                    <Link
-                        href="/login"
-                        className="hidden h-10 items-center gap-2 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700 transition hover:border-[#07945d] hover:bg-emerald-50 hover:text-[#07945d] sm:flex"
-                    >
-                        <Search size={16} />
-                        Login
-                    </Link>
+                    {isAuthenticated
+                        ? <button
+                            onClick={handleLogout}
+                            className="hidden h-10 items-center gap-2 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700 transition hover:border-[#07945d] hover:bg-emerald-50 hover:text-[#07945d] sm:flex"
+                        >
+                            <Search size={16} />
+                            Logout
+                        </button>
+                        : <Link
+                            href="/login"
+                            className="hidden h-10 items-center gap-2 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700 transition hover:border-[#07945d] hover:bg-emerald-50 hover:text-[#07945d] sm:flex"
+                        >
+                            <Search size={16} />
+                            Login
+                        </Link>}
 
                     <Link
                         href="/signup"

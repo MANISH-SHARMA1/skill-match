@@ -1,4 +1,3 @@
-
 import { axiosClient } from "@/utils/axiosClient";
 
 export interface CompanyRecord {
@@ -42,17 +41,13 @@ export interface CompanyRecord {
   isPublished: boolean;
 }
 
-function unwrap<T>(response: {
-  data: { result: { data?: T } & T };
-}): T {
+function unwrap<T>(response: { data: { result: { data?: T } & T } }): T {
   const result = response.data.result;
   return (result.data ?? result) as T;
 }
 
 export async function getCompanyProfile() {
-  const response = await axiosClient.get("/api/company/profile", {
-    withCredentials: true,
-  });
+  const response = await axiosClient.get("/api/company/profile");
 
   return unwrap<{ company: CompanyRecord }>(response).company;
 }
@@ -70,11 +65,7 @@ export async function createCompanyProfile(input: {
   overview?: string;
   about?: string;
 }) {
-  const response = await axiosClient.post(
-    "/api/company/profile",
-    input,
-    { withCredentials: true }
-  );
+  const response = await axiosClient.post("/api/company/profile", input);
 
   return unwrap<{ company: CompanyRecord }>(response).company;
 }
@@ -100,19 +91,13 @@ export async function updateCompanyProfile(input: {
     icon: string;
   }[];
 }) {
-  const response = await axiosClient.patch(
-    "/api/company/profile",
-    input,
-    { withCredentials: true }
-  );
+  const response = await axiosClient.patch("/api/company/profile", input);
 
   return unwrap<{ company: CompanyRecord }>(response).company;
 }
 
 export async function getCompanyTeam() {
-  const response = await axiosClient.get("/api/company/profile/team", {
-    withCredentials: true,
-  });
+  const response = await axiosClient.get("/api/company/profile/team");
 
   return unwrap<{
     team: CompanyRecord["team"];
@@ -124,11 +109,7 @@ export async function addCompanyTeamMember(input: {
   role: string;
   email?: string;
 }) {
-  const response = await axiosClient.post(
-    "/api/company/profile/team",
-    input,
-    { withCredentials: true }
-  );
+  const response = await axiosClient.post("/api/company/profile/team", input);
 
   return unwrap<{
     member: CompanyRecord["team"][number];
@@ -143,12 +124,11 @@ export async function updateCompanyTeamMember(
     email?: string;
     avatar?: string;
     linkedIn?: string;
-  }
+  },
 ) {
   const response = await axiosClient.patch(
     `/api/company/profile/team/${memberId}`,
     input,
-    { withCredentials: true }
   );
 
   return unwrap<{
@@ -156,11 +136,6 @@ export async function updateCompanyTeamMember(
   }>(response).member;
 }
 
-export async function deleteCompanyTeamMember(
-  memberId: string
-): Promise<void> {
-  await axiosClient.delete(
-    `/api/company/profile/team/${memberId}`,
-    { withCredentials: true }
-  );
+export async function deleteCompanyTeamMember(memberId: string): Promise<void> {
+  await axiosClient.delete(`/api/company/profile/team/${memberId}`);
 }

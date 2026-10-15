@@ -91,7 +91,7 @@ export default function LoginPage() {
         password: formData.password,
         rememberMe: formData.rememberMe,
       })
-      // console.log(response.data.result)
+      
       login(response.data.result.accessToken)
 
       setFormData({

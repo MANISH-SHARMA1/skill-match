@@ -4,7 +4,6 @@ import dbConnect from "@/dbConnect";
 import Company from "@/models/Company";
 import { verifyAccessToken } from "@/utils/authMiddleware";
 import { success, error } from "@/utils/responseWrapper";
-import { AnyActionArg } from "react";
 
 async function getCompany(req: NextRequest) {
   const { valid, response, user } = await verifyAccessToken(req);

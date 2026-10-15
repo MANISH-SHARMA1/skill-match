@@ -42,23 +42,23 @@ type Company = {
 
 
 const initialCompany: Company = {
-  name: "TechNova Solutions",
-  website: "https://www.technova.com",
-  email: "hr@technova.com",
-  phone: "+91 98765 43210",
-  location: "Bangalore, Karnataka, India",
-  founded: "2018",
-  size: "11–50 employees",
-  industry: "IT Services & Consulting",
+  name: "",
+  website: "",
+  email: "",
+  phone: "",
+  location: "",
+  founded: "",
+  size: "",
+  industry: "",
   description:
-    "TechNova Solutions is a fast-growing technology company focused on building scalable web and mobile applications for businesses across different industries. We believe in innovation, collaboration and creating meaningful impact through technology.",
+    "",
   about:
-    "We help businesses transform their ideas into digital products through modern engineering, thoughtful design and reliable technology solutions.",
+    "",
   mission:
-    "To empower businesses through accessible, innovative and dependable digital solutions.",
-  linkedin: "https://linkedin.com",
-  twitter: "https://x.com",
-  instagram: "https://instagram.com",
+    "",
+  linkedin: "",
+  twitter: "",
+  instagram: "",
 };
 
 const navItems = [
@@ -270,6 +270,7 @@ export default function CompanyProfilePage() {
   const [mobileSidebar, setMobileSidebar] = useState(false);
   const [notice, setNotice] = useState("");
   const [hydrated, setHydrated] = useState(false);
+  const isCreating = !company.name;
 
   const [team, setTeam] = useState([
     { id: "1", name: "Rahul Sharma", role: "Founder & CEO", email: "rahul@technova.com" },
@@ -311,18 +312,9 @@ export default function CompanyProfilePage() {
             email: member.email ?? "",
           }))
         );
-      } catch (err) {
+      } catch (err: any) {
         if (cancelled) return;
-
-        const status = (
-          err as { response?: { status?: number } }
-        )?.response?.status;
-
-        if (status === 404) {
-          setNotice("Create your company profile to get started.");
-        } else {
-          setNotice("Unable to load company profile.");
-        }
+        setNotice(err)
       } finally {
         if (!cancelled) setHydrated(true);
       }
@@ -358,10 +350,17 @@ export default function CompanyProfilePage() {
     setEditing(true);
   }
 
-
-  async function saveCompany(e: React.FormEvent<HTMLFormElement>) {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    if (isCreating) {
+      createInitialCompany();
+    } else {
+      saveCompany();
+    }
+  }
+
+  async function saveCompany() {
     if (!editDraft.name.trim() || !editDraft.industry.trim()) {
       notify("Company name and industry are required.");
       return;
@@ -1153,7 +1152,7 @@ export default function CompanyProfilePage() {
               </button>
             </div>
 
-            <form onSubmit={saveCompany} className="max-h-[75vh] space-y-4 overflow-y-auto p-5 sm:p-7">
+            <form onSubmit={handleSubmit} className="max-h-[75vh] space-y-4 overflow-y-auto p-5 sm:p-7">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Company Name" value={editDraft.name} onChange={(v) => setEditDraft((s) => ({ ...s, name: v }))} />
                 <Field label="Website" value={editDraft.website} onChange={(v) => setEditDraft((s) => ({ ...s, website: v }))} />

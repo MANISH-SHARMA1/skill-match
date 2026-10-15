@@ -209,7 +209,6 @@ export default function ProfileSettingsPage() {
   const [showEducationForm, setShowEducationForm] = useState(false);
 
   const [menuResume, setMenuResume] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [hydrated, setHydrated] = useState(false);
 
